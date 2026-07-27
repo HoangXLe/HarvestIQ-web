@@ -5,10 +5,10 @@ applications:
       phases:
         preBuild:
           commands:
-            - cd ../.. && npm ci
+            - npm ci --prefix ../..
         build:
           commands:
-            - cd ../.. && npm run build
+            - npm run build --prefix ../..
       artifacts:
         baseDirectory: .next
         files:
