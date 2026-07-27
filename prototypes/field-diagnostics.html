@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HarvestIQ — Field Diagnostics</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --canopy:#1F2E1A;
+  --canopy-2:#152110;
+  --canopy-3:#2A3D22;
+  --parchment:#F1EBDA;
+  --parchment-2:#E6DCC2;
+  --card:#FBF8EF;
+  --husk:#B8863B;
+  --husk-dark:#93692A;
+  --blight:#A63A2E;
+  --blight-soft:#F1DAD5;
+  --amber:#C98A2C;
+  --amber-soft:#F3E2C2;
+  --sprout:#5C7A3D;
+  --sprout-soft:#DFE6CF;
+  --ink:#241F19;
+  --ink-soft:#5B5544;
+  --ink-faint:#8A8371;
+  --line: rgba(36,31,25,0.14);
+  --shadow: 0 8px 24px rgba(21,33,16,0.12);
+  --radius: 10px;
+  --font-display:'Fraunces', serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--parchment);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+a{color:inherit;}
+::selection{background:var(--husk); color:#fff;}
+
+:focus-visible{
+  outline: 2.5px solid var(--husk);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+}
+
+.hidden{display:none !important;}
+
+/* ---------- Login ---------- */
+#login-screen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(92,122,61,0.25), transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(184,134,59,0.18), transparent 50%),
+    var(--canopy);
+  padding:24px;
+}
+.login-card{
+  background:var(--card);
+  width:100%;
+  max-width:420px;
+  border-radius:var(--radius);
+  box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  padding:40px 36px 32px;
+  position:relative;
+  overflow:hidden;
+}
+.login-card::before{
+  content:"";
+  position:absolute; top:0; left:0; right:0; height:6px;
+  background:linear-gradient(90deg, var(--sprout), var(--husk), var(--blight));
+}
+.login-mark{
+  display:flex; align-items:center; gap:10px; margin-bottom:22px;
+}
+.login-mark .glyph{
+  width:38px; height:38px; border-radius:50%;
+  background:var(--canopy);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--parchment); font-family:var(--font-display); font-weight:600; font-size:18px;
+}
+.login-mark .word{ font-family:var(--font-display); font-size:22px; font-weight:600; letter-spacing:0.2px;}
+.login-mark .word em{ font-style:italic; color:var(--sprout);}
+.login-card h1{
+  font-family:var(--font-display); font-weight:500; font-size:26px; line-height:1.25;
+  margin-bottom:8px;
+}
+.login-card p.sub{ color:var(--ink-soft); font-size:14px; margin-bottom:26px; line-height:1.5;}
+.field{ margin-bottom:16px; }
+.field label{ display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); margin-bottom:6px; font-weight:600;}
+.field input, .field select, .field textarea{
+  width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:7px;
+  background:#fff; font-size:14.5px; color:var(--ink); transition:border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--husk); }
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 20px; border-radius:7px; border:none; font-size:14.5px; font-weight:600;
+  transition:transform .12s ease, box-shadow .12s ease, background .15s;
+}
+.btn:active{ transform:translateY(1px); }
+.btn-primary{ background:var(--canopy); color:var(--parchment); }
+.btn-primary:hover{ background:var(--canopy-3); }
+.btn-husk{ background:var(--husk); color:#fff; }
+.btn-husk:hover{ background:var(--husk-dark); }
+.btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
+.btn-ghost:hover{ border-color:var(--ink-faint); }
+.btn-danger{ background:transparent; color:var(--blight); border:1.5px solid var(--blight-soft); }
+.btn-danger:hover{ background:var(--blight-soft); }
+.btn-block{ width:100%; }
+.btn:disabled{ opacity:0.55; cursor:not-allowed; }
+
+/* ---------- App shell ---------- */
+#app{ display:flex; min-height:100vh; }
+
+.sidebar{
+  width:230px; flex-shrink:0;
+  background:var(--canopy);
+  color:var(--parchment);
+  display:flex; flex-direction:column;
+  padding:22px 16px;
+  position:sticky; top:0; height:100vh;
+}
+.sidebar-brand{ display:flex; align-items:center; gap:10px; padding:0 8px 22px; border-bottom:1px solid rgba(241,235,218,0.15); margin-bottom:18px;}
+.sidebar-brand .glyph{
+  width:32px; height:32px; border-radius:50%; background:var(--parchment);
+  color:var(--canopy); display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:600; font-size:15px;
+}
+.sidebar-brand .word{ font-family:var(--font-display); font-size:18px; font-weight:600;}
+.nav-group{ margin-bottom:20px; }
+.nav-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(241,235,218,0.45); padding:0 10px; margin-bottom:8px; font-weight:600;}
+.nav-item{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 10px; border-radius:7px; font-size:14px; font-weight:500;
+  color:rgba(241,235,218,0.78);
+  cursor:pointer; margin-bottom:2px; background:none; border:none; width:100%; text-align:left;
+  transition:background .15s, color .15s;
+}
+.nav-item .ic{ width:18px; height:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.nav-item:hover{ background:rgba(241,235,218,0.08); color:var(--parchment); }
+.nav-item.active{ background:rgba(241,235,218,0.14); color:var(--parchment); }
+.nav-item.active::before{ content:""; }
+.sidebar-footer{ margin-top:auto; padding-top:14px; border-top:1px solid rgba(241,235,218,0.15); }
+.profile-chip{ display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:7px; }
+.profile-chip .av{ width:28px; height:28px; border-radius:50%; background:var(--husk); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; font-family:var(--font-mono);}
+.profile-chip .name{ font-size:13px; font-weight:500; }
+.profile-chip .farmname{ font-size:11px; color:rgba(241,235,218,0.55); }
+.signout{ margin-top:10px; font-size:12px; color:rgba(241,235,218,0.55); background:none; border:none; padding:6px 10px; text-align:left; width:100%; border-radius:6px;}
+.signout:hover{ background:rgba(241,235,218,0.08); color:var(--parchment); }
+
+.main{ flex:1; min-width:0; padding:34px 42px 60px; max-width:1180px; }
+.view{ animation:fadeIn .35s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+.view-header{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:26px; gap:20px; flex-wrap:wrap;}
+.eyebrow{ font-family:var(--font-mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--husk-dark); margin-bottom:6px; font-weight:600;}
+.view-header h2{ font-family:var(--font-display); font-size:30px; font-weight:500; letter-spacing:-0.2px;}
+.view-header .desc{ color:var(--ink-soft); font-size:14px; margin-top:4px; max-width:520px; }
+
+/* ---------- Cards / grid ---------- */
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px; box-shadow:var(--shadow);
+}
+.grid{ display:grid; gap:18px; }
+.grid-4{ grid-template-columns:repeat(4,1fr); }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+.grid-2{ grid-template-columns:1.1fr 0.9fr; }
+@media (max-width:980px){ .grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:1fr;} .grid-2{grid-template-columns:1fr;} }
+
+.stat-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow);}
+.stat-card .label{ font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; margin-bottom:8px;}
+.stat-card .value{ font-family:var(--font-mono); font-size:28px; font-weight:600; }
+.stat-card .sub{ font-size:12px; color:var(--ink-faint); margin-top:4px;}
+
+.section-title{ font-family:var(--font-display); font-size:18px; font-weight:600; margin-bottom:14px; }
+
+/* activity list */
+.activity-row{ display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line);}
+.activity-row:last-child{ border-bottom:none; }
+.activity-thumb{ width:44px; height:44px; border-radius:7px; object-fit:cover; background:var(--parchment-2); flex-shrink:0; }
+.activity-info{ flex:1; min-width:0; }
+.activity-info .t1{ font-size:13.5px; font-weight:600; }
+.activity-info .t2{ font-size:12px; color:var(--ink-faint); }
+.badge{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.03em;}
+.badge-low{ background:var(--sprout-soft); color:var(--sprout); }
+.badge-moderate{ background:var(--amber-soft); color:var(--amber); }
+.badge-high, .badge-severe{ background:var(--blight-soft); color:var(--blight); }
+
+/* ---------- Farms ---------- */
+.farm-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); position:relative;}
+.farm-card .crop-tag{ position:absolute; top:16px; right:16px; font-family:var(--font-mono); font-size:10.5px; background:var(--canopy); color:var(--parchment); padding:3px 9px; border-radius:14px; text-transform:uppercase; letter-spacing:0.04em;}
+.farm-card h3{ font-family:var(--font-display); font-size:19px; font-weight:600; margin-bottom:4px; padding-right:70px;}
+.farm-card .loc{ font-size:12.5px; color:var(--ink-soft); margin-bottom:14px; }
+.farm-meta{ display:flex; gap:18px; margin-bottom:16px; }
+.farm-meta div .k{ font-size:10.5px; text-transform:uppercase; color:var(--ink-faint); letter-spacing:0.05em; font-weight:600;}
+.farm-meta div .v{ font-family:var(--font-mono); font-size:15px; font-weight:600; }
+.farm-actions{ display:flex; gap:8px; }
+.farm-actions .btn{ padding:7px 12px; font-size:12.5px; }
+
+.empty-state{ text-align:center; padding:56px 24px; color:var(--ink-soft); }
+.empty-state .ic{ font-size:34px; margin-bottom:10px; }
+.empty-state h4{ font-family:var(--font-display); font-size:18px; color:var(--ink); margin-bottom:6px; font-weight:600;}
+.empty-state p{ font-size:13.5px; margin-bottom:18px; }
+
+/* ---------- Modal ---------- */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(21,17,10,0.55); display:flex;
+  align-items:center; justify-content:center; z-index:100; padding:20px; backdrop-filter:blur(2px);
+}
+.modal{ background:var(--card); border-radius:var(--radius); padding:28px; width:100%; max-width:460px; box-shadow:0 30px 70px rgba(0,0,0,0.4); max-height:88vh; overflow-y:auto;}
+.modal h3{ font-family:var(--font-display); font-size:21px; font-weight:600; margin-bottom:18px;}
+.modal-actions{ display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+/* ---------- Diagnose view ---------- */
+.stepper{ display:flex; gap:0; margin-bottom:24px; }
+.step-pill{
+  flex:1; text-align:center; padding:9px 6px; font-size:12px; font-weight:600; color:var(--ink-faint);
+  border-bottom:3px solid var(--line); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.04em;
+}
+.step-pill.active{ color:var(--canopy); border-bottom-color:var(--husk); }
+.step-pill.done{ color:var(--sprout); }
+
+.upload-zone{
+  border:2px dashed var(--ink-faint); border-radius:var(--radius); padding:44px 24px;
+  text-align:center; background:repeating-linear-gradient(135deg, rgba(184,134,59,0.03) 0 10px, transparent 10px 20px);
+  cursor:pointer; transition:border-color .15s, background .15s; position:relative;
+}
+.upload-zone:hover, .upload-zone.drag{ border-color:var(--husk); background:rgba(184,134,59,0.06); }
+.upload-zone .ic{ font-size:36px; margin-bottom:12px; }
+.upload-zone h4{ font-family:var(--font-display); font-size:17px; font-weight:600; margin-bottom:6px;}
+.upload-zone p{ font-size:13px; color:var(--ink-soft); }
+.upload-preview{ position:relative; border-radius:var(--radius); overflow:hidden; }
+.upload-preview img{ width:100%; max-height:340px; object-fit:cover; display:block; }
+.viewfinder{ position:absolute; inset:14px; border:1.5px solid rgba(255,255,255,0.85); border-radius:6px; pointer-events:none; }
+.viewfinder::before, .viewfinder::after{ content:""; position:absolute; width:18px; height:18px; border-color:#fff; }
+.viewfinder::before{ top:-1.5px; left:-1.5px; border-top:2.5px solid; border-left:2.5px solid; }
+.viewfinder::after{ bottom:-1.5px; right:-1.5px; border-bottom:2.5px solid; border-right:2.5px solid; }
+.upload-actions{ display:flex; gap:10px; margin-top:14px; }
+
+.loading-line{ display:flex; align-items:center; gap:12px; padding:22px 0; font-family:var(--font-mono); font-size:13px; color:var(--ink-soft); }
+.spinner{ width:18px; height:18px; border-radius:50%; border:2.5px solid var(--line); border-top-color:var(--husk); animation:spin .8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* Specimen card */
+.specimen{
+  background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; border:1px solid var(--line);
+  animation:riseIn .5s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes riseIn{ from{ opacity:0; transform:translateY(10px) scale(.99); } to{ opacity:1; transform:none; } }
+.specimen-strip{
+  height:14px; background-image: radial-gradient(circle, var(--parchment) 3px, transparent 3.5px);
+  background-size:16px 16px; background-position:6px center; background-color:var(--canopy);
+}
+.specimen-body{ padding:24px; display:flex; gap:20px; }
+.specimen-thumb{ width:120px; height:120px; border-radius:8px; object-fit:cover; flex-shrink:0; border:3px solid var(--parchment-2);}
+.specimen-info{ flex:1; min-width:0; }
+.specimen-info .label-tag{ font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-faint); font-weight:600;}
+.specimen-info h3{ font-family:var(--font-display); font-style:italic; font-size:23px; font-weight:500; margin:4px 0 10px;}
+.specimen-metrics{ display:flex; gap:26px; margin-bottom:12px; }
+.specimen-metrics .m .k{ font-size:10.5px; text-transform:uppercase; color:var(--ink-faint); font-weight:600; letter-spacing:0.05em;}
+.specimen-metrics .m .v{ font-family:var(--font-mono); font-size:19px; font-weight:600; }
+.specimen-desc{ font-size:13.5px; line-height:1.6; color:var(--ink-soft); }
+.specimen-lists{ padding:0 24px 24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.specimen-lists .col h5{ font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--husk-dark); font-weight:700; margin-bottom:8px;}
+.specimen-lists ul{ list-style:none; }
+.specimen-lists li{ font-size:13px; line-height:1.55; padding-left:16px; position:relative; margin-bottom:6px; color:var(--ink);}
+.specimen-lists li::before{ content:"—"; position:absolute; left:0; color:var(--ink-faint); }
+
+/* Env form + risk gauge */
+.env-form{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:6px; }
+.gauge-wrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 0; }
+.gauge-value{ font-family:var(--font-mono); font-size:38px; font-weight:600; margin-top:-92px; }
+.gauge-caption{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; margin-top:6px; }
+.risk-summary{ font-size:13.5px; line-height:1.6; color:var(--ink-soft); text-align:center; margin-top:8px; padding:0 6px; }
+
+.bars-wrap{ display:flex; align-items:flex-end; gap:10px; height:150px; padding:10px 6px 0; }
+.bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.bar{ width:100%; border-radius:4px 4px 2px 2px; transition:height .4s ease; min-height:3px; }
+.bar-label{ font-family:var(--font-mono); font-size:10px; color:var(--ink-faint); margin-top:6px; }
+.bar-score{ font-family:var(--font-mono); font-size:10.5px; font-weight:600; margin-bottom:4px; }
+
+/* Reports table */
+.report-row{
+  background:var(--card); border:1px solid var(--line); border-radius:9px; margin-bottom:10px; overflow:hidden;
+}
+.report-summary{ display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer; }
+.report-summary img{ width:46px; height:46px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+.report-summary .info{ flex:1; min-width:0; }
+.report-summary .info .t1{ font-weight:600; font-size:14px; }
+.report-summary .info .t2{ font-size:12px; color:var(--ink-faint); }
+.report-summary .chev{ color:var(--ink-faint); transition:transform .2s; }
+.report-summary .chev.open{ transform:rotate(90deg); }
+.report-detail{ padding:0 18px 18px; border-top:1px solid var(--line); }
+
+/* Settings */
+.settings-row{ display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--line);}
+.settings-row:last-child{ border-bottom:none; }
+.settings-row .t1{ font-size:14px; font-weight:600; }
+.settings-row .t2{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+.toggle{ position:relative; width:42px; height:24px; border-radius:14px; background:var(--line); border:none; flex-shrink:0; }
+.toggle.on{ background:var(--sprout); }
+.toggle::after{ content:""; position:absolute; top:2.5px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.toggle.on::after{ transform:translateX(18px); }
+
+/* Toast */
+#toast-container{ position:fixed; bottom:22px; right:22px; z-index:200; display:flex; flex-direction:column; gap:10px; }
+.toast{
+  background:var(--canopy); color:var(--parchment); padding:12px 18px; border-radius:8px; font-size:13.5px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; align-items:center; gap:10px; animation:toastIn .25s ease; max-width:320px;
+}
+.toast.error{ background:var(--blight); }
+@keyframes toastIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none;} }
+
+.disclaimer{ font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:36px; padding-top:18px; border-top:1px solid var(--line); line-height:1.6;}
+
+/* ---------- Auth tabs ---------- */
+.auth-tabs{ display:flex; gap:4px; background:var(--parchment-2); border-radius:8px; padding:4px; margin-bottom:22px; }
+.auth-tab{ flex:1; text-align:center; padding:9px 8px; border-radius:6px; border:none; background:none; font-size:13.5px; font-weight:600; color:var(--ink-soft); }
+.auth-tab.active{ background:var(--card); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+.auth-error{ background:var(--blight-soft); color:var(--blight); font-size:13px; padding:10px 13px; border-radius:7px; margin-bottom:14px; display:none; }
+.auth-error.show{ display:block; }
+.auth-form{ display:none; }
+.auth-form.active{ display:block; }
+.pw-hint{ font-size:11.5px; color:var(--ink-faint); margin-top:-8px; margin-bottom:14px; }
+
+/* ---------- Resources view ---------- */
+.chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+.chip{
+  padding:9px 15px; border-radius:20px; border:1.5px solid var(--line); background:var(--card);
+  font-size:13px; font-weight:600; color:var(--ink-soft); transition:all .15s;
+}
+.chip:hover{ border-color:var(--husk); color:var(--ink); }
+.chip.active{ background:var(--canopy); border-color:var(--canopy); color:var(--parchment); }
+.map-frame-wrap{ border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:var(--parchment-2); min-height:340px; position:relative; }
+.map-frame-wrap iframe{ width:100%; height:340px; border:0; display:block; }
+.map-placeholder{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:340px; color:var(--ink-faint); gap:8px; }
+.map-placeholder .ic{ font-size:30px; }
+.resource-tip{ font-size:13.5px; line-height:1.6; color:var(--ink-soft); background:var(--parchment); border-radius:8px; padding:14px 16px; margin-top:14px; border-left:3px solid var(--husk); }
+.alert-banner{
+  display:flex; align-items:center; gap:14px; background:var(--blight-soft); color:var(--blight);
+  border-radius:9px; padding:14px 18px; margin-bottom:20px; font-size:13.5px; font-weight:500;
+}
+.alert-banner .btn{ flex-shrink:0; }
+.map-open-link{ font-size:12.5px; color:var(--husk-dark); font-weight:600; text-decoration:none; display:inline-flex; gap:4px; align-items:center; margin-top:10px; }
+.map-open-link:hover{ text-decoration:underline; }
+
+/* ---------- Mini charts (dashboard) ---------- */
+.hbar-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.hbar-row .hlabel{ width:88px; flex-shrink:0; font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+.hbar-track{ flex:1; height:14px; background:var(--parchment-2); border-radius:7px; overflow:hidden; }
+.hbar-fill{ height:100%; border-radius:7px; transition:width .5s ease; }
+.hbar-row .hval{ width:34px; text-align:right; flex-shrink:0; font-family:var(--font-mono); font-size:12px; font-weight:600; }
+
+@media (max-width:860px){
+  #app{ flex-direction:column; }
+  .sidebar{ width:100%; height:auto; position:relative; flex-direction:row; flex-wrap:wrap; padding:14px; }
+  .sidebar-brand{ border-bottom:none; margin-bottom:0; padding-bottom:0; width:100%;}
+  .nav-group{ display:flex; gap:6px; margin-bottom:0; width:100%; flex-wrap:wrap;}
+  .nav-label{ display:none; }
+  .sidebar-footer{ display:none; }
+  .main{ padding:22px 18px 50px; }
+  .specimen-body{ flex-direction:column; }
+  .specimen-lists{ grid-template-columns:1fr; }
+  .env-form{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<!-- ================= APP ================= -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="glyph">H</div>
+      <div class="word">Harvest<span style="font-style:italic;color:var(--husk);">IQ</span></div>
+    </div>
+    <nav class="nav-group" style="margin-top:20px;">
+      <div class="nav-label">Workspace</div>
+      <button class="nav-item" data-view="dashboard"><span class="ic">▤</span> Dashboard</button>
+      <button class="nav-item" data-view="farms"><span class="ic">⌂</span> My Farms</button>
+      <button class="nav-item" data-view="diagnose"><span class="ic">◎</span> Diagnose</button>
+      <button class="nav-item" data-view="reports"><span class="ic">▦</span> Reports</button>
+      <button class="nav-item" data-view="resources"><span class="ic">📍</span> Resources</button>
+    </nav>
+    <nav class="nav-group">
+      <div class="nav-label">Account</div>
+      <button class="nav-item" data-view="settings"><span class="ic">⚙</span> Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="profile-chip">
+        <div class="av" id="profile-av">M</div>
+        <div>
+          <div class="name" id="profile-name">—</div>
+          <div class="farmname" id="profile-farmname">—</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section id="view-dashboard" class="view">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">Overview</div>
+          <h2>Good to see you back, <span id="dash-name">grower</span>.</h2>
+          <p class="desc">A snapshot of your farms, diagnoses, and outstanding risk since your last visit.</p>
+        </div>
+        <button class="btn btn-husk" data-view="diagnose">◎ New diagnosis</button>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:22px;">
+        <div class="stat-card">
+          <div class="label">Farms tracked</div>
+          <div class="value" id="stat-farms">0</div>
+          <div class="sub">across all crop types</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Diagnoses run</div>
+          <div class="value" id="stat-diagnoses">0</div>
+          <div class="sub">saved to reports</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Avg. confidence</div>
+          <div class="value" id="stat-confidence">—</div>
+          <div class="sub">across saved scans</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Active high-risk alerts</div>
+          <div class="value" id="stat-alerts" style="color:var(--blight);">0</div>
+          <div class="sub">7-day forecast ≥ high</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:18px;">
+        <div class="card">
+          <div class="section-title">Recent activity</div>
+          <div id="recent-activity"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Highest current risk</div>
+          <div id="risk-leaderboard"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="section-title">Risk by crop type</div>
+          <div id="crop-risk-chart"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Confidence trend</div>
+          <div id="confidence-trend"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- FARMS ---------- -->
+    <section id="view-farms" class="view hidden">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">Farm management</div>
+          <h2>My Farms</h2>
+          <p class="desc">Keep field profiles current so diagnoses and forecasts stay grouped correctly.</p>
+        </div>
+        <button class="btn btn-primary" id="add-farm-btn">+ Add farm</button>
+      </div>
+      <div id="farms-grid" class="grid grid-3"></div>
+    </section>
+
+    <!-- ---------- DIAGNOSE ---------- -->
+    <section id="view-diagnose" class="view hidden">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">Upload → Classify → Forecast → Recommend</div>
+          <h2>Diagnose a crop photo</h2>
+          <p class="desc">Photograph a single leaf against a plain background, in even light, for the most reliable read.</p>
+        </div>
+      </div>
+
+      <div class="stepper">
+        <div class="step-pill" id="pill-1">1 · Select field</div>
+        <div class="step-pill" id="pill-2">2 · Upload</div>
+        <div class="step-pill" id="pill-3">3 · Classify</div>
+        <div class="step-pill" id="pill-4">4 · Risk forecast</div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="field" style="margin-bottom:0;">
+          <label for="diag-farm-select">Farm / field</label>
+          <select id="diag-farm-select"></select>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;" id="upload-card">
+        <div id="upload-zone-wrap"></div>
+        <input type="file" id="file-input" accept="image/*" class="hidden">
+      </div>
+
+      <div id="diagnosis-result"></div>
+      <div id="forecast-section" class="hidden"></div>
+    </section>
+
+    <!-- ---------- REPORTS ---------- -->
+    <section id="view-reports" class="view hidden">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">History</div>
+          <h2>Diagnosis history</h2>
+          <p class="desc">Every saved diagnosis and its risk forecast, stored locally in this browser.</p>
+        </div>
+        <select id="reports-filter" style="padding:9px 12px; border-radius:7px; border:1.5px solid var(--line); background:#fff; font-size:13px;">
+          <option value="all">All farms</option>
+        </select>
+      </div>
+      <div id="reports-list"></div>
+    </section>
+
+    <!-- ---------- RESOURCES ---------- -->
+    <section id="view-resources" class="view hidden">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">Nearby help</div>
+          <h2>Resources near your farm</h2>
+          <p class="desc">Find agronomists, supply stores, and equipment mechanics close to your fields — useful for confirming a diagnosis or sourcing treatment fast.</p>
+        </div>
+      </div>
+
+      <div id="resources-alert"></div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="two-col" style="margin-bottom:16px;">
+          <div class="field" style="margin-bottom:0;">
+            <label for="resources-farm-select">Farm / field</label>
+            <select id="resources-farm-select"></select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="resources-location">Location</label>
+            <input id="resources-location" type="text" placeholder="e.g. Fresno County, CA">
+          </div>
+        </div>
+        <div class="chip-row" id="resource-chips"></div>
+        <div class="map-frame-wrap" id="resource-map-wrap">
+          <div class="map-placeholder"><div class="ic">📍</div><div>Choose a category above to see nearby options</div></div>
+        </div>
+        <div id="resource-tip"></div>
+      </div>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section id="view-settings" class="view hidden">
+      <div class="view-header">
+        <div>
+          <div class="eyebrow">Preferences</div>
+          <h2>Settings</h2>
+          <p class="desc">Manage your workspace profile, units, and locally stored data.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="section-title">Profile</div>
+        <div class="two-col">
+          <div class="field"><label>Name</label><input id="settings-name" type="text"></div>
+          <div class="field"><label>Farm / cooperative</label><input id="settings-farmname" type="text"></div>
+        </div>
+        <button class="btn btn-primary" id="save-profile-btn">Save profile</button>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="section-title">Units</div>
+        <div class="settings-row">
+          <div><div class="t1">Use metric units</div><div class="t2">°C, mm rainfall — off shows °F, inches</div></div>
+          <button class="toggle" id="units-toggle"></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Data</div>
+        <div class="settings-row">
+          <div><div class="t1">Clear all local data</div><div class="t2">Removes farms, diagnoses, preferences, and your profile from this browser</div></div>
+          <button class="btn btn-danger" id="clear-data-btn">Clear data</button>
+        </div>
+      </div>
+
+      <p class="disclaimer">HarvestIQ is an AI-assisted screening tool. Disease classification and outbreak forecasts are generated by a large language model reasoning over your photo and reported field conditions — they are decision support, not a certified agronomic diagnosis.</p>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ================= FARM MODAL ================= -->
+<div id="farm-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 id="farm-modal-title">Add farm</h3>
+    <input type="hidden" id="farm-edit-id">
+    <div class="field"><label>Farm / field name</label><input id="farm-name" type="text" placeholder="e.g. North Forty"></div>
+    <div class="two-col">
+      <div class="field"><label>Primary crop</label>
+        <select id="farm-crop">
+          <option>Tomato</option><option>Corn / Maize</option><option>Wheat</option>
+          <option>Soybean</option><option>Potato</option><option>Grape</option>
+          <option>Apple</option><option>Rice</option><option>Cotton</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Acreage</label><input id="farm-acres" type="number" min="0" placeholder="e.g. 35"></div>
+    </div>
+    <div class="field"><label>Location</label><input id="farm-location" type="text" placeholder="e.g. Fresno County, CA"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="farm-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="farm-save-btn">Save farm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+/* ============================================================
+   STATE
+============================================================ */
+let account = { id:'local-grower', name:'Grower', farmname:'Independent grower' };
+
+let farms = [];
+let diagnoses = [];
+let unitsMetric = true;
+
+let currentImage = null;
+let currentDiagnosis = null;
+let currentForecast = null;
+let currentFarmId = null;
+let openReportId = null;
+let activeResourceCategory = null;
+
+/* ============================================================
+   STORAGE HELPERS
+============================================================ */
+async function storageGet(key){
+  try{
+    if(window.storage && typeof window.storage.get === 'function'){
+      const r = await window.storage.get(key, false);
+      return r ? JSON.parse(r.value) : null;
+    }
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  try{
+    if(window.storage && typeof window.storage.set === 'function'){
+      await window.storage.set(key, JSON.stringify(value), false);
+    }else{
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+  }catch(e){ console.error('storage set failed', key, e); }
+}
+async function storageDelete(key){
+  try{
+    if(window.storage && typeof window.storage.delete === 'function') await window.storage.delete(key, false);
+    else localStorage.removeItem(key);
+  }catch(e){}
+}
+
+function scopedKey(base){ return 'harvestiq:' + base; }
+
+async function loadAccountData(){
+  account = (await storageGet(scopedKey('profile'))) || account;
+  farms = (await storageGet(scopedKey('farms'))) || [];
+  diagnoses = (await storageGet(scopedKey('diagnoses'))) || [];
+  const u = await storageGet(scopedKey('units'));
+  unitsMetric = u === null ? true : u.metric;
+}
+async function saveFarms(){ await storageSet(scopedKey('farms'), farms); }
+async function saveDiagnoses(){ await storageSet(scopedKey('diagnoses'), diagnoses); }
+async function saveUnits(){ await storageSet(scopedKey('units'), {metric: unitsMetric}); }
+async function saveAccountProfile(){ await storageSet(scopedKey('profile'), account); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+function delay(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+/* ============================================================
+   TOASTS
+============================================================ */
+function toast(msg, isError){
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError ? ' error' : '');
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3800);
+}
+
+/* ============================================================
+   CLAUDE API CALLS (+ local demo fallback for browser use)
+============================================================ */
+/* Security: never call third-party AI APIs from the browser with secrets.
+   This prototype uses local demo models only. */
+async function callClaude(){
+  throw new Error('External AI calls are disabled in this prototype for security.');
+}
+
+async function diagnoseImage(base64, mediaType, cropType){
+  await delay(900);
+  return demoDiagnosis(cropType);
+}
+
+async function forecastRisk(payload){
+  await delay(800);
+  return demoForecast(payload);
+}
+
+function parseJsonLoose(text){
+  let t = text.trim();
+  t = t.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if(start >= 0 && end > start) t = t.slice(start, end+1);
+  return JSON.parse(t);
+}
+
+/* --- demo models --- */
+
+function demoDiagnosis(cropType){
+  const crop = (cropType || 'crop').toLowerCase();
+  const catalog = [
+    {
+      disease_name: 'Early Blight',
+      confidence: 0.86,
+      severity: 'moderate',
+      description: 'Concentric brown lesions and yellowing around leaf margins are consistent with early blight pressure. The pattern suggests a fungal infection progressing from older foliage.',
+      symptoms_observed: ['Concentric target-like lesions', 'Chlorosis around leaf edges', 'Dry necrotic spots on mid-leaf'],
+      treatment_recommendations: ['Remove and destroy heavily infected leaves', 'Apply a labeled fungicide suited to early blight', 'Improve airflow by thinning dense canopy'],
+      prevention_tips: ['Rotate out of solanaceous crops for 2–3 seasons', 'Water at soil level to keep foliage dry', 'Mulch to reduce soil splash onto leaves']
+    },
+    {
+      disease_name: 'Powdery Mildew',
+      confidence: 0.81,
+      severity: 'low',
+      description: 'A pale powdery film on the leaf surface is typical of powdery mildew. Conditions look favorable for slow spread if humidity stays moderate overnight.',
+      symptoms_observed: ['White powdery patches on upper leaf', 'Slight leaf curling', 'Localized yellow flecks'],
+      treatment_recommendations: ['Apply sulfur or potassium bicarbonate spray per label', 'Prune crowded shoots for better light', 'Monitor neighboring plants for early spots'],
+      prevention_tips: ['Avoid overhead irrigation late in the day', 'Choose resistant cultivars next season', 'Space plants for airflow']
+    },
+    {
+      disease_name: 'Healthy / No Disease Detected',
+      confidence: 0.74,
+      severity: 'none',
+      description: 'Leaf color and surface texture look within a normal range for this crop. No clear necrotic lesions or widespread chlorosis were identified in the photo.',
+      symptoms_observed: ['Even green coloration', 'Intact leaf margins', 'No obvious fungal sporulation'],
+      treatment_recommendations: ['Continue routine scouting twice weekly', 'Keep current irrigation schedule', 'Photograph the same plant in 3–5 days for comparison'],
+      prevention_tips: ['Maintain balanced fertility', 'Sanitize tools between fields', 'Scout after rain events']
+    }
+  ];
+  let pick = catalog[Math.floor(Math.random() * catalog.length)];
+  if(crop.includes('grape') || crop.includes('wheat')) pick = catalog[1];
+  if(crop.includes('tomato') || crop.includes('potato')) pick = catalog[0];
+  return JSON.parse(JSON.stringify(pick));
+}
+
+function demoForecast(payload){
+  const humidity = Number(payload.humidity) || 50;
+  const wetness = Number(payload.leafWetness) || 2;
+  const rain = Number(payload.rainfall) || 0;
+  let base = 25 + humidity * 0.35 + wetness * 6 + Math.min(rain * 3, 20);
+  if(String(payload.severity).toLowerCase() === 'high') base += 18;
+  if(String(payload.severity).toLowerCase() === 'moderate') base += 10;
+  if(String(payload.trend).toLowerCase().includes('dry')) base -= 15;
+  if(String(payload.trend).toLowerCase().includes('wet')) base += 12;
+  base = Math.max(8, Math.min(92, Math.round(base)));
+  const daily = Array.from({length:7}, (_,i)=>{
+    const wobble = Math.round((Math.sin(i * 0.9) * 6) + (i * 1.5));
+    return { day: 'Day ' + (i+1), risk_score: Math.max(5, Math.min(98, base + wobble)) };
+  });
+  const avg = Math.round(daily.reduce((s,d)=>s+d.risk_score,0)/7);
+  const level = avg >= 75 ? 'severe' : avg >= 55 ? 'high' : avg >= 35 ? 'moderate' : 'low';
+  return {
+    overall_risk_level: level,
+    risk_summary: `Based on ${payload.humidity}% humidity, ${payload.leafWetness} hours of leaf wetness, and a ${payload.trend.toLowerCase()} outlook, near-term pressure for ${payload.disease} on ${payload.crop} is ${level}. Field scouting over the next week remains the safest confirmation step.`,
+    daily_risk: daily,
+    recommended_actions: [
+      'Scout the affected block every 48 hours and photograph progressive leaves',
+      'Confirm product choice with a local agronomist before a spray program',
+      'Adjust irrigation timing to reduce overnight leaf wetness where possible',
+      'Isolate heavily symptomatic plants when practical'
+    ]
+  };
+}
+
+/* ============================================================
+   IMAGE HANDLING (resize via canvas)
+============================================================ */
+function resizeImageFile(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 900;
+        let {width, height} = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * maxDim/width); width = maxDim; }
+          else{ width = Math.round(width * maxDim/height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const base64 = dataUrl.split(',')[1];
+        resolve({ dataUrl, base64, mediaType:'image/jpeg' });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+view).classList.remove('hidden');
+  document.querySelectorAll('.nav-item[data-view="'+view+'"]').forEach(n=>n.classList.add('active'));
+  if(view === 'dashboard') renderDashboard();
+  if(view === 'farms') renderFarms();
+  if(view === 'diagnose') renderDiagnoseView();
+  if(view === 'reports') renderReports();
+  if(view === 'resources') renderResources();
+  if(view === 'settings') renderSettings();
+}
+
+document.querySelectorAll('[data-view]').forEach(el=>{
+  el.addEventListener('click', ()=> switchView(el.getAttribute('data-view')) );
+});
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function renderDashboard(){
+  document.getElementById('dash-name').textContent = (account && account.name) ? account.name.split(' ')[0] : 'grower';
+  document.getElementById('stat-farms').textContent = farms.length;
+  document.getElementById('stat-diagnoses').textContent = diagnoses.length;
+
+  if(diagnoses.length){
+    const avg = diagnoses.reduce((s,d)=> s + (d.diagnosis.confidence||0), 0) / diagnoses.length;
+    document.getElementById('stat-confidence').textContent = Math.round(avg*100) + '%';
+  } else {
+    document.getElementById('stat-confidence').textContent = '—';
+  }
+
+  const highRiskCount = diagnoses.filter(d => d.forecast && (d.forecast.overall_risk_level==='high' || d.forecast.overall_risk_level==='severe')).length;
+  document.getElementById('stat-alerts').textContent = highRiskCount;
+
+  const activityEl = document.getElementById('recent-activity');
+  activityEl.innerHTML = '';
+  const recent = [...diagnoses].sort((a,b)=>b.timestamp-a.timestamp).slice(0,6);
+  if(!recent.length){
+    activityEl.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="ic">◎</div><h4>No diagnoses yet</h4><p>Run your first crop scan to see activity here.</p></div>';
+  } else {
+    recent.forEach(d=>{
+      const farm = farms.find(f=>f.id===d.farmId);
+      const row = document.createElement('div');
+      row.className = 'activity-row';
+      row.innerHTML = `
+        <img class="activity-thumb" src="${d.imageDataUrl}">
+        <div class="activity-info">
+          <div class="t1">${escapeHtml(d.diagnosis.disease_name)}</div>
+          <div class="t2">${farm ? escapeHtml(farm.name) : 'Unknown field'} · ${new Date(d.timestamp).toLocaleDateString()}</div>
+        </div>
+        ${severityBadge(d.diagnosis.severity)}
+      `;
+      activityEl.appendChild(row);
+    });
+  }
+
+  const lbEl = document.getElementById('risk-leaderboard');
+  lbEl.innerHTML = '';
+  const withForecast = diagnoses.filter(d=>d.forecast).sort((a,b)=>{
+    const order = {severe:4, high:3, moderate:2, low:1};
+    return (order[b.forecast.overall_risk_level]||0) - (order[a.forecast.overall_risk_level]||0);
+  }).slice(0,6);
+  if(!withForecast.length){
+    lbEl.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="ic">⛅</div><h4>No forecasts yet</h4><p>Run a risk forecast during diagnosis to populate this list.</p></div>';
+  } else {
+    withForecast.forEach(d=>{
+      const farm = farms.find(f=>f.id===d.farmId);
+      const row = document.createElement('div');
+      row.className = 'activity-row';
+      row.innerHTML = `
+        <div class="activity-info">
+          <div class="t1">${farm ? escapeHtml(farm.name) : 'Unknown field'}</div>
+          <div class="t2">${escapeHtml(d.diagnosis.disease_name)}</div>
+        </div>
+        ${riskBadge(d.forecast.overall_risk_level)}
+      `;
+      lbEl.appendChild(row);
+    });
+  }
+
+  renderCropRiskChart();
+  renderConfidenceTrend();
+}
+
+function renderCropRiskChart(){
+  const el = document.getElementById('crop-risk-chart');
+  const latestByFarm = {};
+  diagnoses.filter(d=>d.forecast).forEach(d=>{
+    if(!latestByFarm[d.farmId] || d.timestamp > latestByFarm[d.farmId].timestamp) latestByFarm[d.farmId] = d;
+  });
+  const cropScores = {};
+  Object.values(latestByFarm).forEach(d=>{
+    const farm = farms.find(f=>f.id===d.farmId);
+    if(!farm) return;
+    const avg = Math.round((d.forecast.daily_risk||[]).reduce((s,x)=>s+x.risk_score,0) / Math.max(1,(d.forecast.daily_risk||[]).length));
+    if(!cropScores[farm.crop]) cropScores[farm.crop] = [];
+    cropScores[farm.crop].push(avg);
+  });
+  const crops = Object.keys(cropScores);
+  if(!crops.length){
+    el.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="ic">🌱</div><h4>Not enough data yet</h4><p>Run forecasts across your farms to compare risk by crop.</p></div>';
+    return;
+  }
+  el.innerHTML = crops.map(crop=>{
+    const vals = cropScores[crop];
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    return `
+      <div class="hbar-row">
+        <div class="hlabel">${escapeHtml(crop)}</div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:${avg}%; background:${riskColor(avg)};"></div></div>
+        <div class="hval">${avg}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderConfidenceTrend(){
+  const el = document.getElementById('confidence-trend');
+  const ordered = [...diagnoses].sort((a,b)=>a.timestamp-b.timestamp).slice(-10);
+  if(ordered.length < 2){
+    el.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="ic">📈</div><h4>Not enough history yet</h4><p>Save a few diagnoses to see your confidence trend over time.</p></div>';
+    return;
+  }
+  const w = 460, h = 130, pad = 16;
+  const pts = ordered.map((d,i)=>{
+    const x = pad + (i/(ordered.length-1)) * (w - pad*2);
+    const conf = (d.diagnosis.confidence||0)*100;
+    const y = h - pad - (conf/100)*(h - pad*2);
+    return {x, y, conf};
+  });
+  const path = pts.map((p,i)=> (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--husk)"/>`).join('');
+  el.innerHTML = `
+    <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible;">
+      <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--line)" stroke-width="1"/>
+      <path d="${path}" fill="none" stroke="var(--husk)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>
+    <p style="font-size:11.5px;color:var(--ink-faint);margin-top:6px;">Last ${ordered.length} saved diagnoses, oldest to most recent</p>
+  `;
+}
+
+function severityBadge(sev){
+  const map = {none:'low', low:'low', moderate:'moderate', high:'high'};
+  const cls = map[sev] || 'low';
+  const label = sev === 'none' ? 'healthy' : sev;
+  return `<span class="badge badge-${cls}">${label}</span>`;
+}
+function riskBadge(level){
+  const cls = level==='severe' ? 'severe' : level;
+  return `<span class="badge badge-${cls}">${level}</span>`;
+}
+function escapeHtml(s){
+  if(s===undefined || s===null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   FARMS
+============================================================ */
+function renderFarms(){
+  const grid = document.getElementById('farms-grid');
+  grid.innerHTML = '';
+  if(!farms.length){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="ic">⌂</div><h4>No farms yet</h4>
+      <p>Add a farm or field profile to start organizing diagnoses.</p>
+      <button class="btn btn-primary" onclick="document.getElementById('add-farm-btn').click()">+ Add your first farm</button>
+    </div>`;
+    return;
+  }
+  farms.forEach(f=>{
+    const diagCount = diagnoses.filter(d=>d.farmId===f.id).length;
+    const card = document.createElement('div');
+    card.className = 'farm-card';
+    card.innerHTML = `
+      <div class="crop-tag">${escapeHtml(f.crop)}</div>
+      <h3>${escapeHtml(f.name)}</h3>
+      <div class="loc">${escapeHtml(f.location || 'No location set')}</div>
+      <div class="farm-meta">
+        <div><div class="k">Acreage</div><div class="v">${f.acres || '—'}</div></div>
+        <div><div class="k">Diagnoses</div><div class="v">${diagCount}</div></div>
+      </div>
+      <div class="farm-actions">
+        <button class="btn btn-ghost" data-edit="${f.id}">Edit</button>
+        <button class="btn btn-danger" data-del="${f.id}">Remove</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> openFarmModal(b.getAttribute('data-edit'))));
+  grid.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
+    const id = b.getAttribute('data-del');
+    farms = farms.filter(f=>f.id!==id);
+    await saveFarms();
+    renderFarms();
+    toast('Farm removed');
+  }));
+}
+
+function openFarmModal(editId){
+  document.getElementById('farm-modal').classList.remove('hidden');
+  document.getElementById('farm-edit-id').value = editId || '';
+  if(editId){
+    const f = farms.find(x=>x.id===editId);
+    document.getElementById('farm-modal-title').textContent = 'Edit farm';
+    document.getElementById('farm-name').value = f.name;
+    document.getElementById('farm-crop').value = f.crop;
+    document.getElementById('farm-acres').value = f.acres;
+    document.getElementById('farm-location').value = f.location;
+  } else {
+    document.getElementById('farm-modal-title').textContent = 'Add farm';
+    ['farm-name','farm-acres','farm-location'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('farm-crop').selectedIndex = 0;
+  }
+}
+document.getElementById('add-farm-btn').addEventListener('click', ()=>openFarmModal(null));
+document.getElementById('farm-cancel-btn').addEventListener('click', ()=> document.getElementById('farm-modal').classList.add('hidden'));
+document.getElementById('farm-save-btn').addEventListener('click', async ()=>{
+  const editId = document.getElementById('farm-edit-id').value;
+  const name = document.getElementById('farm-name').value.trim();
+  if(!name){ toast('Farm name is required', true); return; }
+  const data = {
+    name,
+    crop: document.getElementById('farm-crop').value,
+    acres: document.getElementById('farm-acres').value,
+    location: document.getElementById('farm-location').value.trim()
+  };
+  if(editId){
+    const f = farms.find(x=>x.id===editId);
+    Object.assign(f, data);
+  } else {
+    farms.push({ id: uid(), ...data });
+  }
+  await saveFarms();
+  document.getElementById('farm-modal').classList.add('hidden');
+  renderFarms();
+  populateFarmSelects();
+  toast('Farm saved');
+});
+
+function populateFarmSelects(){
+  const sel = document.getElementById('diag-farm-select');
+  const filt = document.getElementById('reports-filter');
+  const resSel = document.getElementById('resources-farm-select');
+  const prevDiag = sel.value, prevFilt = filt.value, prevRes = resSel ? resSel.value : null;
+
+  sel.innerHTML = farms.length ? '' : '<option value="">— Add a farm first —</option>';
+  farms.forEach(f=>{
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = `${f.name} (${f.crop})`;
+    sel.appendChild(o);
+  });
+
+  filt.innerHTML = '<option value="all">All farms</option>';
+  farms.forEach(f=>{
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = f.name;
+    filt.appendChild(o);
+  });
+
+  if(resSel){
+    resSel.innerHTML = farms.length ? '' : '<option value="">— Add a farm first —</option>';
+    farms.forEach(f=>{
+      const o = document.createElement('option');
+      o.value = f.id; o.textContent = `${f.name} (${f.crop})`;
+      resSel.appendChild(o);
+    });
+  }
+
+  if(farms.some(f=>f.id===prevDiag)) sel.value = prevDiag;
+  if(farms.some(f=>f.id===prevFilt) || prevFilt==='all') filt.value = prevFilt;
+  if(resSel && farms.some(f=>f.id===prevRes)) resSel.value = prevRes;
+}
+/* ============================================================
+   DIAGNOSE VIEW
+============================================================ */
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const pill = document.getElementById('pill-'+i);
+    pill.classList.remove('active','done');
+    if(i < n) pill.classList.add('done');
+    if(i === n) pill.classList.add('active');
+  }
+}
+
+function renderDiagnoseView(){
+  populateFarmSelects();
+  currentImage = null; currentDiagnosis = null; currentForecast = null;
+  document.getElementById('diagnosis-result').innerHTML = '';
+  document.getElementById('forecast-section').innerHTML = '';
+  document.getElementById('forecast-section').classList.add('hidden');
+  renderUploadZone();
+  setStep(1);
+}
+
+function renderUploadZone(){
+  const wrap = document.getElementById('upload-zone-wrap');
+  if(!currentImage){
+    wrap.innerHTML = `
+      <div class="upload-zone" id="upload-zone">
+        <div class="ic">📷</div>
+        <h4>Drop a leaf photo here, or click to browse</h4>
+        <p>JPG or PNG, ideally a single leaf filling most of the frame</p>
+      </div>`;
+    const zone = document.getElementById('upload-zone');
+    zone.addEventListener('click', ()=> document.getElementById('file-input').click());
+    zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('drag'); });
+    zone.addEventListener('dragleave', ()=> zone.classList.remove('drag'));
+    zone.addEventListener('drop', e=>{
+      e.preventDefault(); zone.classList.remove('drag');
+      if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  } else {
+    wrap.innerHTML = `
+      <div class="upload-preview">
+        <img src="${currentImage.dataUrl}">
+        <div class="viewfinder"></div>
+      </div>
+      <div class="upload-actions">
+        <button class="btn btn-husk" id="run-diagnosis-btn">◎ Run diagnosis</button>
+        <button class="btn btn-ghost" id="retake-btn">Choose different photo</button>
+      </div>
+    `;
+    document.getElementById('run-diagnosis-btn').addEventListener('click', runDiagnosis);
+    document.getElementById('retake-btn').addEventListener('click', ()=>{
+      currentImage = null;
+      document.getElementById('diagnosis-result').innerHTML = '';
+      document.getElementById('forecast-section').innerHTML = '';
+      document.getElementById('forecast-section').classList.add('hidden');
+      renderUploadZone();
+      setStep(1);
+    });
+  }
+}
+
+document.getElementById('file-input').addEventListener('change', (e)=>{
+  if(e.target.files[0]) handleFile(e.target.files[0]);
+});
+async function handleFile(file){
+  if(!file.type.startsWith('image/')){ toast('Please choose an image file', true); return; }
+  try{
+    currentImage = await resizeImageFile(file);
+    setStep(2);
+    renderUploadZone();
+  }catch(e){ toast('Could not read that image', true); }
+}
+
+async function runDiagnosis(){
+  const farmId = document.getElementById('diag-farm-select').value;
+  if(!farmId){ toast('Add and select a farm first', true); return; }
+  currentFarmId = farmId;
+  const farm = farms.find(f=>f.id===farmId);
+  setStep(3);
+  const resultEl = document.getElementById('diagnosis-result');
+  resultEl.innerHTML = `<div class="loading-line"><div class="spinner"></div> Analyzing leaf image for disease markers…</div>`;
+  try{
+    const diag = await diagnoseImage(currentImage.base64, currentImage.mediaType, farm.crop);
+    currentDiagnosis = diag;
+    renderDiagnosisResult(diag);
+    renderEnvForm(farm);
+  }catch(e){
+    console.error(e);
+    resultEl.innerHTML = `<div class="card" style="border-color:var(--blight-soft);"><strong style="color:var(--blight);">Diagnosis failed.</strong> ${escapeHtml(e.message)}. Please try again.</div>`;
+  }
+}
+
+function renderDiagnosisResult(diag){
+  const resultEl = document.getElementById('diagnosis-result');
+  const sevClass = {none:'low', low:'low', moderate:'moderate', high:'high'}[diag.severity] || 'low';
+  resultEl.innerHTML = `
+    <div class="specimen" style="margin-bottom:20px;">
+      <div class="specimen-strip"></div>
+      <div class="specimen-body">
+        <img class="specimen-thumb" src="${currentImage.dataUrl}">
+        <div class="specimen-info">
+          <div class="label-tag">Field specimen · classification</div>
+          <h3>${escapeHtml(diag.disease_name)}</h3>
+          <div class="specimen-metrics">
+            <div class="m"><div class="k">Confidence</div><div class="v">${Math.round((diag.confidence||0)*100)}%</div></div>
+            <div class="m"><div class="k">Severity</div><div class="v"><span class="badge badge-${sevClass}">${diag.severity}</span></div></div>
+          </div>
+          <div class="specimen-desc">${escapeHtml(diag.description)}</div>
+        </div>
+      </div>
+      <div class="specimen-lists">
+        <div class="col">
+          <h5>Symptoms observed</h5>
+          <ul>${(diag.symptoms_observed||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul>
+        </div>
+        <div class="col">
+          <h5>Treatment recommendations</h5>
+          <ul>${(diag.treatment_recommendations||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="specimen-lists" style="grid-template-columns:1fr; padding-top:0;">
+        <div class="col">
+          <h5>Prevention tips</h5>
+          <ul>${(diag.prevention_tips||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEnvForm(farm){
+  const sec = document.getElementById('forecast-section');
+  sec.classList.remove('hidden');
+  const tempUnit = unitsMetric ? '°C' : '°F';
+  const rainUnit = unitsMetric ? 'mm' : 'in';
+  sec.innerHTML = `
+    <div class="card" style="margin-bottom:18px;">
+      <div class="section-title">Current field conditions</div>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Enter today's readings (from a weather app, station, or your own observation) to forecast 7-day outbreak risk.</p>
+      <div class="env-form">
+        <div class="field"><label>Temperature (${tempUnit})</label><input type="number" id="env-temp" value="${unitsMetric?24:75}"></div>
+        <div class="field"><label>Relative humidity (%)</label><input type="number" id="env-humidity" min="0" max="100" value="70"></div>
+        <div class="field"><label>Rainfall, last 24h (${rainUnit})</label><input type="number" step="0.1" id="env-rainfall" value="${unitsMetric?5:0.2}"></div>
+        <div class="field"><label>Leaf wetness (hrs/day)</label><input type="number" step="0.5" id="env-wetness" value="4"></div>
+      </div>
+      <div class="field">
+        <label>Forecast trend, next 3 days</label>
+        <select id="env-trend">
+          <option value="continued warm and wet conditions">Continued warm and wet</option>
+          <option value="cooling and drying">Cooling and drying</option>
+          <option value="hot and dry">Hot and dry</option>
+          <option value="mixed rain and sun">Mixed rain and sun</option>
+          <option value="cold snap expected">Cold snap expected</option>
+        </select>
+      </div>
+      <button class="btn btn-husk" id="run-forecast-btn">⛅ Forecast outbreak risk</button>
+    </div>
+    <div id="forecast-result"></div>
+  `;
+  document.getElementById('run-forecast-btn').addEventListener('click', ()=>runForecast(farm));
+}
+
+async function runForecast(farm){
+  const resEl = document.getElementById('forecast-result');
+  resEl.innerHTML = `<div class="loading-line"><div class="spinner"></div> Modeling 7-day disease pressure from field conditions…</div>`;
+  const payload = {
+    crop: farm.crop,
+    disease: currentDiagnosis.disease_name,
+    severity: currentDiagnosis.severity,
+    temp: document.getElementById('env-temp').value,
+    tempUnit: unitsMetric ? '°C' : '°F',
+    humidity: document.getElementById('env-humidity').value,
+    rainfall: document.getElementById('env-rainfall').value,
+    rainUnit: unitsMetric ? 'mm' : 'in',
+    leafWetness: document.getElementById('env-wetness').value,
+    trend: document.getElementById('env-trend').options[document.getElementById('env-trend').selectedIndex].text
+  };
+  try{
+    const forecast = await forecastRisk(payload);
+    currentForecast = forecast;
+    setStep(4);
+    renderForecastResult(forecast);
+  }catch(e){
+    console.error(e);
+    resEl.innerHTML = `<div class="card" style="border-color:var(--blight-soft);"><strong style="color:var(--blight);">Forecast failed.</strong> ${escapeHtml(e.message)}. Please try again.</div>`;
+  }
+}
+
+function riskColor(score){
+  if(score >= 70) return getCss('--blight');
+  if(score >= 40) return getCss('--amber');
+  return getCss('--sprout');
+}
+function getCss(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function renderForecastResult(forecast){
+  const resEl = document.getElementById('forecast-result');
+  const levelColorClass = forecast.overall_risk_level==='severe' ? 'severe' : forecast.overall_risk_level;
+  const avgScore = Math.round((forecast.daily_risk||[]).reduce((s,d)=>s+d.risk_score,0) / Math.max(1,(forecast.daily_risk||[]).length));
+
+  resEl.innerHTML = `
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="section-title">7-day outbreak risk</div>
+        <div class="bars-wrap">
+          ${(forecast.daily_risk||[]).map(d=>`
+            <div class="bar-col">
+              <div class="bar-score">${d.risk_score}</div>
+              <div class="bar" style="height:${Math.max(4,d.risk_score)}%; background:${riskColor(d.risk_score)};"></div>
+              <div class="bar-label">${d.day.replace('Day ','D')}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="gauge-wrap">
+          ${gaugeSvg(avgScore)}
+          <div class="gauge-value" style="color:${riskColor(avgScore)};">${avgScore}</div>
+          <div class="gauge-caption">avg. risk score</div>
+          <div style="margin-top:10px;"><span class="badge badge-${levelColorClass}">${forecast.overall_risk_level} risk</span></div>
+        </div>
+        <div class="risk-summary">${escapeHtml(forecast.risk_summary)}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px;">
+      <div class="section-title">Recommended actions</div>
+      <ul style="list-style:none;">
+        ${(forecast.recommended_actions||[]).map(a=>`<li style="padding-left:18px;position:relative;margin-bottom:8px;font-size:13.5px;line-height:1.55;"><span style="position:absolute;left:0;color:var(--husk-dark);">✓</span>${escapeHtml(a)}</li>`).join('')}
+      </ul>
+      <button class="btn btn-primary" id="save-report-btn" style="margin-top:14px;">💾 Save to reports</button>
+    </div>
+  `;
+  document.getElementById('save-report-btn').addEventListener('click', saveCurrentReport);
+}
+
+function gaugeSvg(score){
+  const r = 54, c = 2*Math.PI*r;
+  const pct = Math.max(0,Math.min(100,score))/100;
+  const offset = c * (1-pct);
+  const color = riskColor(score);
+  return `
+  <svg width="150" height="150" viewBox="0 0 150 150">
+    <circle cx="75" cy="75" r="${r}" fill="none" stroke="var(--parchment-2)" stroke-width="12"/>
+    <circle cx="75" cy="75" r="${r}" fill="none" stroke="${color}" stroke-width="12"
+      stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round"
+      transform="rotate(-90 75 75)" style="transition:stroke-dashoffset .8s ease;"/>
+  </svg>`;
+}
+
+async function saveCurrentReport(){
+  if(!currentDiagnosis || !currentImage) return;
+  diagnoses.push({
+    id: uid(),
+    farmId: currentFarmId,
+    timestamp: Date.now(),
+    imageDataUrl: currentImage.dataUrl,
+    diagnosis: currentDiagnosis,
+    forecast: currentForecast
+  });
+  await saveDiagnoses();
+  toast('Saved to reports');
+  switchView('reports');
+}
+
+/* ============================================================
+   REPORTS
+============================================================ */
+function renderReports(){
+  populateFarmSelects();
+  const filterVal = document.getElementById('reports-filter').value;
+  const listEl = document.getElementById('reports-list');
+  listEl.innerHTML = '';
+  let items = [...diagnoses].sort((a,b)=>b.timestamp-a.timestamp);
+  if(filterVal !== 'all') items = items.filter(d=>d.farmId===filterVal);
+
+  if(!items.length){
+    listEl.innerHTML = `<div class="empty-state"><div class="ic">▦</div><h4>No reports here yet</h4><p>Saved diagnoses will appear in this list.</p></div>`;
+    return;
+  }
+  items.forEach(d=>{
+    const farm = farms.find(f=>f.id===d.farmId);
+    const row = document.createElement('div');
+    row.className = 'report-row';
+    const isOpen = openReportId === d.id;
+    row.innerHTML = `
+      <div class="report-summary" data-toggle="${d.id}">
+        <img src="${d.imageDataUrl}">
+        <div class="info">
+          <div class="t1">${escapeHtml(d.diagnosis.disease_name)} · ${farm ? escapeHtml(farm.name) : 'Unknown field'}</div>
+          <div class="t2">${new Date(d.timestamp).toLocaleString()}</div>
+        </div>
+        ${severityBadge(d.diagnosis.severity)}
+        ${d.forecast ? riskBadge(d.forecast.overall_risk_level) : ''}
+        <span class="chev ${isOpen?'open':''}">›</span>
+      </div>
+      <div class="report-detail ${isOpen?'':'hidden'}" id="detail-${d.id}"></div>
+    `;
+    listEl.appendChild(row);
+    row.querySelector('[data-toggle]').addEventListener('click', ()=>{
+      openReportId = (openReportId === d.id) ? null : d.id;
+      renderReports();
+    });
+    if(isOpen){
+      const detail = row.querySelector('#detail-'+d.id);
+      detail.innerHTML = buildReportDetail(d);
+      const delBtn = detail.querySelector('[data-delete-report]');
+      if(delBtn) delBtn.addEventListener('click', async ()=>{
+        diagnoses = diagnoses.filter(x=>x.id!==d.id);
+        await saveDiagnoses();
+        toast('Report deleted');
+        renderReports();
+      });
+    }
+  });
+}
+
+function buildReportDetail(d){
+  const diag = d.diagnosis, fc = d.forecast;
+  let html = `<div class="specimen-lists" style="padding:16px 0 0;">
+    <div class="col"><h5>Symptoms</h5><ul>${(diag.symptoms_observed||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>
+    <div class="col"><h5>Treatment</h5><ul>${(diag.treatment_recommendations||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></div>
+  </div>`;
+  if(fc){
+    html += `<div style="margin-top:8px;">
+      <h5 style="font-size:11.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--husk-dark);font-weight:700;margin-bottom:8px;">7-day risk</h5>
+      <div class="bars-wrap" style="height:90px;">
+        ${(fc.daily_risk||[]).map(dr=>`
+          <div class="bar-col">
+            <div class="bar" style="height:${Math.max(4,dr.risk_score)}%; background:${riskColor(dr.risk_score)};"></div>
+            <div class="bar-label">${dr.day.replace('Day ','D')}</div>
+          </div>`).join('')}
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">${escapeHtml(fc.risk_summary)}</p>
+    </div>`;
+  }
+  html += `<button class="btn btn-danger" data-delete-report style="margin-top:14px;">Delete this report</button>`;
+  return html;
+}
+document.getElementById('reports-filter').addEventListener('change', renderReports);
+
+/* ============================================================
+   RESOURCES (map, recommendations, nearby help)
+============================================================ */
+const RESOURCE_CATEGORIES = [
+  { key:'agronomist', label:'👩‍🌾 Certified Agronomist', query:'certified agronomist crop consultant',
+    tip:'For moderate, high, or severe risk forecasts, an in-person visit from a certified agronomist is the most reliable way to confirm an AI screening result before spending on treatment.' },
+  { key:'extension', label:'🌾 Extension Office', query:'agricultural extension office',
+    tip:'University and county extension offices often provide free or low-cost soil testing, disease confirmation, and region-specific guidance — a good first call for an unclear diagnosis.' },
+  { key:'supply', label:'🧪 Crop Supply Store', query:'farm supply store fertilizer pesticide',
+    tip:'Local supply stores can source the specific fungicide, bactericide, or amendment referenced in your treatment recommendations, and advise on safe application rates.' },
+  { key:'mechanic', label:'🔧 Equipment Mechanic', query:'farm equipment repair mechanic',
+    tip:'Well-maintained sprayers and irrigation equipment apply treatment more evenly — worth a service check right after a new diagnosis, especially before a spray program.' },
+  { key:'dealer', label:'🚜 Equipment Dealer', query:'farm equipment dealer',
+    tip:'Dealers can advise on precision-ag attachments, like variable-rate sprayers or soil moisture sensors, that reduce disease risk over future seasons.' }
+];
+
+function renderResources(){
+  populateFarmSelects();
+  activeResourceCategory = null;
+
+  const resSel = document.getElementById('resources-farm-select');
+  const locInput = document.getElementById('resources-location');
+  const chipsEl = document.getElementById('resource-chips');
+
+  function syncLocationFromFarm(){
+    const farm = farms.find(f=>f.id===resSel.value);
+    if(farm && farm.location) locInput.value = farm.location;
+  }
+  resSel.onchange = syncLocationFromFarm;
+  if(farms.length) syncLocationFromFarm();
+
+  chipsEl.innerHTML = '';
+  RESOURCE_CATEGORIES.forEach(cat=>{
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.textContent = cat.label;
+    chip.addEventListener('click', ()=>{
+      activeResourceCategory = cat.key;
+      chipsEl.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      renderResourceMap(cat);
+    });
+    chipsEl.appendChild(chip);
+  });
+  locInput.oninput = ()=>{
+    if(activeResourceCategory){
+      const cat = RESOURCE_CATEGORIES.find(c=>c.key===activeResourceCategory);
+      if(cat) renderResourceMap(cat);
+    }
+  };
+
+  const alertEl = document.getElementById('resources-alert');
+  const urgent = diagnoses.filter(d=>d.forecast && (d.forecast.overall_risk_level==='high' || d.forecast.overall_risk_level==='severe'));
+  if(urgent.length){
+    alertEl.innerHTML = `
+      <div class="alert-banner">
+        <div style="flex:1;">⚠️ ${urgent.length} saved diagnosis${urgent.length>1?'es':''} currently read high or severe 7-day risk. Consider a certified agronomist visit before treating.</div>
+        <button class="btn btn-primary" id="jump-agronomist-btn">Find agronomists</button>
+      </div>`;
+    document.getElementById('jump-agronomist-btn').addEventListener('click', ()=>{
+      const chipButtons = chipsEl.querySelectorAll('.chip');
+      chipButtons[0].click();
+    });
+  } else {
+    alertEl.innerHTML = '';
+  }
+}
+
+function renderResourceMap(cat){
+  const mapWrap = document.getElementById('resource-map-wrap');
+  const tipEl = document.getElementById('resource-tip');
+  const location = document.getElementById('resources-location').value.trim();
+  const searchQuery = cat.query + (location ? ' near ' + location : '');
+  const embedSrc = 'https://www.google.com/maps?q=' + encodeURIComponent(searchQuery) + '&output=embed';
+  const openLink = 'https://www.google.com/maps/search/' + encodeURIComponent(searchQuery);
+
+  mapWrap.innerHTML = `<iframe src="${embedSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map of ${escapeHtml(cat.label)}"></iframe>`;
+  tipEl.innerHTML = `
+    <div class="resource-tip">${escapeHtml(cat.tip)}</div>
+    <a class="map-open-link" href="${openLink}" target="_blank" rel="noopener">Open full results in Google Maps ↗</a>
+  `;
+}
+
+/* ============================================================
+   SETTINGS
+============================================================ */
+function renderSettings(){
+  document.getElementById('settings-name').value = account?.name || '';
+  document.getElementById('settings-farmname').value = account?.farmname || '';
+  document.getElementById('units-toggle').classList.toggle('on', unitsMetric);
+}
+document.getElementById('save-profile-btn').addEventListener('click', async ()=>{
+  account.name = document.getElementById('settings-name').value.trim() || 'Grower';
+  account.farmname = document.getElementById('settings-farmname').value.trim();
+  await saveAccountProfile();
+  updateProfileChip();
+  toast('Profile updated');
+});
+document.getElementById('units-toggle').addEventListener('click', async ()=>{
+  unitsMetric = !unitsMetric;
+  await saveUnits();
+  renderSettings();
+  toast('Units updated');
+});
+document.getElementById('clear-data-btn').addEventListener('click', async ()=>{
+  if(!confirm('This removes your farms, diagnoses, preferences, and profile from this browser. Continue?')) return;
+  await storageDelete(scopedKey('farms'));
+  await storageDelete(scopedKey('diagnoses'));
+  await storageDelete(scopedKey('units'));
+  await storageDelete(scopedKey('profile'));
+  farms = [];
+  diagnoses = [];
+  unitsMetric = true;
+  account = { id:'local-grower', name:'Grower', farmname:'Independent grower' };
+  updateProfileChip();
+  switchView('dashboard');
+  toast('Local workspace cleared');
+});
+
+function updateProfileChip(){
+  document.getElementById('profile-name').textContent = account?.name || 'Grower';
+  document.getElementById('profile-farmname').textContent = account?.farmname || 'Independent grower';
+  document.getElementById('profile-av').textContent = (account?.name || 'G').trim()[0].toUpperCase();
+}
+
+/* ============================================================
+   DIRECT WORKSPACE STARTUP
+============================================================ */
+function enterApp(){
+  updateProfileChip();
+  switchView('dashboard');
+}
+
+async function init(){
+  await loadAccountData();
+  enterApp();
+}
+init();
+
+})();
+</script>
+</body>
+</html>

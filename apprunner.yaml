@@ -1,0 +1,17 @@
+# Kept for reference. AWS App Runner is closed to new customers (as of 2026-04-30).
+# This project deploys via AWS Amplify Hosting with the same build/start commands.
+version: 1.0
+runtime: nodejs22
+build:
+  commands:
+    build:
+      - npm ci
+      - npm run build
+run:
+  command: npm start
+  network:
+    port: 3000
+    env: PORT
+  env:
+    - name: NODE_ENV
+      value: production
