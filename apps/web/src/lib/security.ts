@@ -22,19 +22,35 @@ export function isSafeImageDataUrl(value: unknown): value is string {
   );
 }
 
+/** Hosts allowed for Google Maps embeds/links we generate. */
+const MAPS_HOSTS = new Set(["www.google.com", "maps.google.com"]);
+
+/**
+ * Path allowlist for Maps URLs we build:
+ * - `/maps` (embed: `?q=…&output=embed`)
+ * - `/maps/search/<query>` (open-in-Maps link)
+ */
+const MAPS_PATH_RE = /^\/maps(?:\/search\/[^?#]+)?$/;
+
 /** Only Google Maps embed/search URLs we build ourselves. */
 export function isAllowedMapsUrl(url: string): boolean {
   try {
     const u = new URL(url);
     if (u.protocol !== "https:") return false;
-    if (u.hostname !== "www.google.com" && u.hostname !== "maps.google.com") {
-      return false;
+    if (!MAPS_HOSTS.has(u.hostname.toLowerCase())) return false;
+    if (u.username || u.password) return false;
+    if (u.port !== "" && u.port !== "443") return false;
+    if (!MAPS_PATH_RE.test(u.pathname)) return false;
+
+    // Embed: https://www.google.com/maps?q=…&output=embed
+    if (u.pathname === "/maps") {
+      return (
+        u.searchParams.has("q") && u.searchParams.get("output") === "embed"
+      );
     }
-    return (
-      u.pathname.startsWith("/maps") ||
-      u.pathname === "/maps" ||
-      u.searchParams.has("q")
-    );
+
+    // Open link: https://www.google.com/maps/search/<query>
+    return u.pathname.startsWith("/maps/search/");
   } catch {
     return false;
   }

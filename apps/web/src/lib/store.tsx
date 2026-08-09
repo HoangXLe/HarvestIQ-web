@@ -17,6 +17,7 @@ import {
   storageSet,
   uid,
 } from "./storage";
+import { buildDemoWorkspace } from "./demo-data";
 import { isSafeImageDataUrl, sanitizePlainText } from "./security";
 import {
   DEFAULT_PROFILE,
@@ -46,6 +47,7 @@ interface AppState {
   addDiagnosis: (record: Omit<DiagnosisRecord, "id">) => Promise<void>;
   removeDiagnosis: (id: string) => Promise<void>;
   clearAllData: () => Promise<void>;
+  loadSampleData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -90,10 +92,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       setPersistOk(true);
-      const p = await storageGet<Profile>("profile");
-      const f = await storageGet<Farm[]>("farms");
-      const d = await storageGet<DiagnosisRecord[]>("diagnoses");
+      let p = await storageGet<Profile>("profile");
+      let f = await storageGet<Farm[]>("farms");
+      let d = await storageGet<DiagnosisRecord[]>("diagnoses");
       const u = await storageGet<{ metric: boolean }>("units");
+      const demoOptOut = await storageGet<boolean>("demoOptOut");
+
+      const farmsEmpty = !Array.isArray(f) || f.length === 0;
+      const diagnosesEmpty = !Array.isArray(d) || d.length === 0;
+      let seededDemo = false;
+      if (farmsEmpty && diagnosesEmpty && !demoOptOut) {
+        const demo = buildDemoWorkspace();
+        await storageSet("profile", demo.profile);
+        await storageSet("farms", demo.farms);
+        await storageSet("diagnoses", demo.diagnoses);
+        await storageSet("units", { metric: demo.unitsMetric });
+        p = demo.profile;
+        f = demo.farms;
+        d = demo.diagnoses;
+        seededDemo = true;
+      }
+
       if (p && typeof p === "object") {
         setProfile({
           id: typeof p.id === "string" ? p.id : DEFAULT_PROFILE.id,
@@ -118,7 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             )
           : [],
       );
-      setUnits(u === null ? true : Boolean(u.metric));
+      setUnits(seededDemo ? true : u === null ? true : Boolean(u.metric));
     } catch (e) {
       setLoadError(errMessage(e, "Failed to load saved workspace."));
       // Keep app usable with empty defaults
@@ -261,12 +280,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await storageDelete("diagnoses");
       await storageDelete("units");
       await storageDelete("profile");
+      await storageSet("demoOptOut", true);
       setFarms([]);
       setDiagnoses([]);
       setUnits(true);
       setProfile(DEFAULT_PROFILE);
       setPersistOk(true);
     });
+  }, [withPersist]);
+
+  const loadSampleData = useCallback(async () => {
+    await withPersist(async () => {
+      const demo = buildDemoWorkspace();
+      await storageDelete("demoOptOut");
+      await storageSet("profile", demo.profile);
+      await storageSet("farms", demo.farms);
+      await storageSet("diagnoses", demo.diagnoses);
+      await storageSet("units", { metric: demo.unitsMetric });
+      setProfile(demo.profile);
+      setFarms(demo.farms);
+      setDiagnoses(demo.diagnoses);
+      setUnits(demo.unitsMetric);
+      setPersistOk(true);
+    }, "Sample showcase data loaded");
   }, [withPersist]);
 
   const value = useMemo(
@@ -291,6 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addDiagnosis,
       removeDiagnosis,
       clearAllData,
+      loadSampleData,
     }),
     [
       ready,
@@ -313,6 +350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addDiagnosis,
       removeDiagnosis,
       clearAllData,
+      loadSampleData,
     ],
   );
 

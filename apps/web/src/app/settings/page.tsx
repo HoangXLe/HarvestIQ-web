@@ -18,6 +18,7 @@ export default function SettingsPage() {
     saveProfile,
     setUnitsMetric,
     clearAllData,
+    loadSampleData,
     toast,
     saving,
   } = useApp();
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savingProfile, setSavingProfile] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
 
   useEffect(() => {
     setName(profile.name);
@@ -147,6 +149,39 @@ export default function SettingsPage() {
 
       <div className="card">
         <div className="mb-3.5 font-display text-lg font-semibold">Data</div>
+        <div className="mb-5 flex flex-col gap-4 border-b border-[var(--line)] py-2 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Load sample showcase data</div>
+            <div className="mt-0.5 text-[12.5px] text-[var(--ink-soft)]">
+              Fills the dashboard with demo farms, diagnoses, and risk forecasts
+              for presentations. Replaces current local farms and reports.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-husk w-full shrink-0 sm:w-auto"
+            disabled={loadingSample || saving}
+            onClick={async () => {
+              if (
+                !confirm(
+                  "Replace this browser’s farms and diagnoses with sample showcase data?",
+                )
+              )
+                return;
+              setLoadingSample(true);
+              try {
+                await loadSampleData();
+                router.push("/");
+              } catch {
+                /* store toast */
+              } finally {
+                setLoadingSample(false);
+              }
+            }}
+          >
+            {loadingSample ? "Loading…" : "Load sample data"}
+          </button>
+        </div>
         <div className="flex flex-col gap-4 py-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="text-sm font-semibold">Clear all local data</div>
